@@ -38,21 +38,21 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []: # Timeout
-            return "Request timed out.!"
+            return "Request timed out!"
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
 
         #Fill in start
         #Fetch the ICMP header from the IP packet
-        header = recPacket[20:28]
-        requestType, code, revChecksum, revId, revSequence = struct.unpack('bbHHh', header)
-        if ID == revId:
-            bytesInDouble = struct.calcsize('d')
-            timeData = struct.unpack('d',recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived - timeData
+        type, code, checksum, Id, sequence = struct.unpack('bbHHh', recPacket[20:28])
+        if ID == Id:
+            calcbytes = struct.calcsize('d')
+            calctime = struct.unpack('d', recPacket[28:28 + calcbytes])[0]
+            delay = timeReceived - calctime
+            return delay
         else:
-            return "ID is not the same!"
+            return "Packet error - incorrect ID."
 
         #Fill in end
 
@@ -104,7 +104,7 @@ def doOnePing(destAddr, timeout):
 def ping(host, timeout=1):
     #timeout=1 means: If one second goes by without a reply from the server,
     #the client assumes that either the clients ping or the servers pong is lost
-    dest = socket.gethostbyname("localhost")
+    dest = socket.gethostbyname(host)
     # dest = socket.gethostbyname(host)
     print "Pinging " + dest + " using Python:"
     print ""
@@ -116,5 +116,12 @@ def ping(host, timeout=1):
     return delay
 
 
-ping("www.poly.edu")
-# ping("127.0.0.1.")
+ping("127.0.0.1")
+# Europe
+# ping("185.60.114.159")
+# South America
+# ping("131.255.7.26")
+# North America
+# ping("poly.edu")
+# Africa
+# ping("197.221.23.194")
