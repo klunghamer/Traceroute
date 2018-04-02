@@ -1,4 +1,5 @@
-from socket import *
+# from socket import *
+import socket
 import os
 import sys
 import struct
@@ -37,25 +38,31 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []: # Timeout
+            return "Request timed out.!"
+
+        timeReceived = time.time()
+        recPacket, addr = mySocket.recvfrom(1024)
+
+        #Fill in start
+        #Fetch the ICMP header from the IP packet
+        header = recPacket[20:28]
+        requestType, code, revChecksum, revId, revSequence = struct.unpack('bbHHh', header)
+        if ID == revId:
+            bytesInDouble = struct.calcsize('d')
+            timeData = struct.unpack('d',recPacket[28:28 + bytesInDouble])[0]
+            return timeReceived - timeData
+        else:
+            return "ID is not the same!"
+
+        #Fill in end
+
+        timeLeft = timeLeft - howLongInSelect
+        if timeLeft <= 0:
             return "Request timed out."
-
-    timeReceived = time.time()
-    recPacket, addr = mySocket.recvfrom(1024)
-
-    #Fill in start
-
-    #Fetch the ICMP header from the IP packet
-
-    #Fill in end
-
-    timeLeft = timeLeft - howLongInSelect
-    if timeLeft <= 0:
-        return "Request timed out."
 
 
 def sendOnePing(mySocket, destAddr, ID):
-# Header is type (8), code (8), checksum (16), id (16), sequence (16)
-
+    # Header is type (8), code (8), checksum (16), id (16), sequence (16)
     myChecksum = 0
     # Make a dummy header with a 0 checksum.
     # struct -- Interpret strings as packed binary data
@@ -73,7 +80,8 @@ def sendOnePing(mySocket, destAddr, ID):
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
-    mySocket.sendto(packet, (destAddr, 1)) # AF_INET address must be tuple, not str
+    mySocket.sendto(packet, (destAddr, 1))
+    # AF_INET address must be tuple, not str
     #Both LISTS and TUPLES consist of a number of objects
     #which can be referenced by their position number within the object
 
@@ -83,6 +91,7 @@ def doOnePing(destAddr, timeout):
     #SOCK_RAW is a powerful socket type. For more details see:http://sock-raw.org/papers/sock_raw
     #Fill in start
     #Create Socket here
+    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
     #Fill in end
     myID = os.getpid() & 0xFFFF #Return the current process i
     sendOnePing(mySocket, destAddr, myID)
@@ -94,8 +103,9 @@ def doOnePing(destAddr, timeout):
 
 def ping(host, timeout=1):
     #timeout=1 means: If one second goes by without a reply from the server,
-    #the client assumes that either the client’s ping or the server’s pong is lost
-    dest = socket.gethostbyname(host)
+    #the client assumes that either the clients ping or the servers pong is lost
+    dest = socket.gethostbyname("localhost")
+    # dest = socket.gethostbyname(host)
     print "Pinging " + dest + " using Python:"
     print ""
     #Send ping requests to a server separated by approximately one second
@@ -107,3 +117,4 @@ def ping(host, timeout=1):
 
 
 ping("www.poly.edu")
+# ping("127.0.0.1.")
